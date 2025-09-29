@@ -1,0 +1,106 @@
+<!-- Save this as app.js and run with: node app.js -->
+<!-- Open http://localhost:3000 in browser -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Playing Card Collection API Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      padding: 20px;
+    }
+    h1 { text-align: center; }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: rgba(0,0,0,0.5);
+      padding: 20px;
+      border-radius: 12px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+    }
+    button {
+      background: #ff7eb3;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    ul { list-style: none; padding: 0; }
+    li { padding: 6px; background: rgba(255,255,255,0.1); margin: 5px 0; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Playing Card Collection</h1>
+  <div class="container">
+    <h3>Add a Card</h3>
+    <input type="text" id="suit" placeholder="Suit (e.g., Hearts)">
+    <input type="text" id="rank" placeholder="Rank (e.g., Ace)">
+    <button onclick="addCard()">Add Card</button>
+    <h3>Card Collection</h3>
+    <ul id="cards"></ul>
+  </div>
+
+  <script>
+    async function fetchCards() {
+      const res = await fetch('/api/cards');
+      const cards = await res.json();
+      document.getElementById('cards').innerHTML = cards.map(c => 
+        `<li>${c.rank} of ${c.suit} 
+          <button onclick="deleteCard('${c.id}')">Delete</button>
+        </li>`).join('');
+    }
+
+    async function addCard() {
+      const suit = document.getElementById('suit').value;
+      const rank = document.getElementById('rank').value;
+      await fetch('/api/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suit, rank })
+      });
+      fetchCards();
+    }
+
+    async function deleteCard(id) {
+      await fetch(`/api/cards/${id}`, { method: 'DELETE' });
+      fetchCards();
+    }
+
+    fetchCards();
+  </script>
+
+  <script type="module">
+    import express from "https://cdn.jsdelivr.net/npm/express@4.19.2/+esm";
+
+    const app = express();
+    app.use(express.json());
+    app.use(express.static('.')); // serve this HTML file
+
+    let cards = [];
+    let idCounter = 1;
+
+    // Routes
+    app.get('/api/cards', (req, res) => res.json(cards));
+    app.post('/api/cards', (req, res) => {
+      const card = { id: idCounter++, ...req.body };
+      cards.push(card);
+      res.json(card);
+    });
+    app.delete('/api/cards/:id', (req, res) => {
+      cards = cards.filter(c => c.id != req.params.id);
+      res.json({ success: true });
+    });
+
+    app.listen(3000, () => console.log("Server running at http://localhost:3000"));
+  </script>
+</body>
+</html>
